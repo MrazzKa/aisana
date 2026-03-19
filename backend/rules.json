@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Low credit",
+    "field": "CreditScore",
+    "operator": "<",
+    "value": "400",
+    "action": "block",
+    "enabled": true,
+    "id": "87c97e0c-4874-4901-8aeb-1814c46caf30"
+  },
+  {
+    "name": "Blacklisted",
+    "field": "Blacklists",
+    "operator": "==",
+    "value": "Yes",
+    "action": "flag",
+    "enabled": true,
+    "id": "7ce1c800-d6a3-467e-aa8e-7f1e2860ce2d"
+  }
+]
