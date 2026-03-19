@@ -16,23 +16,39 @@ from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
 
-MODELS_CONFIG = {
-    "RandomForest": RandomForestClassifier(n_estimators=100, class_weight="balanced", random_state=42),
-    "GradientBoosting": GradientBoostingClassifier(n_estimators=250, learning_rate=0.1, max_depth=6, random_state=42),
-    "CatBoost": CatBoostClassifier(verbose=0, random_state=42),
-    "LightGBM": LGBMClassifier(random_state=42),
-    "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric="logloss", random_state=42)
-}
+
+def _create_model(model_name: str):
+    """Factory function that creates a fresh model instance every time."""
+    factories = {
+        "RandomForest": lambda: RandomForestClassifier(
+            n_estimators=100, class_weight="balanced", random_state=42
+        ),
+        "GradientBoosting": lambda: GradientBoostingClassifier(
+            n_estimators=250, learning_rate=0.1, max_depth=6, random_state=42
+        ),
+        "CatBoost": lambda: CatBoostClassifier(verbose=0, random_state=42),
+        "LightGBM": lambda: LGBMClassifier(random_state=42),
+        "XGBoost": lambda: XGBClassifier(
+            use_label_encoder=False, eval_metric="logloss", random_state=42
+        ),
+    }
+    if model_name not in factories:
+        raise ValueError(f"Model {model_name} is not supported. Available: {list(factories.keys())}")
+    return factories[model_name]()
+
+
+SUPPORTED_MODEL_NAMES = ["RandomForest", "GradientBoosting", "CatBoost", "LightGBM", "XGBoost"]
+
 
 def train_model(df: pd.DataFrame, model_name: str):
-    if model_name not in MODELS_CONFIG:
-        raise ValueError(f"Model {model_name} is not supported.")
+    # Validate model name
+    model = _create_model(model_name)
 
     y = df["IsFraud"].map({"Yes": 1, "No": 0})
     # Fallback to binary values if map failed
     if y.isnull().any():
         y = df["IsFraud"].astype(int)
-        
+
     X = df.drop(columns=["IsFraud"])
 
     # Categorical encoding
@@ -55,7 +71,6 @@ def train_model(df: pd.DataFrame, model_name: str):
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    model = MODELS_CONFIG[model_name]
     start_time = time.time()
     model.fit(X_train_scaled, y_train)
     train_time = time.time() - start_time
@@ -71,14 +86,14 @@ def train_model(df: pd.DataFrame, model_name: str):
     # Test Metrics
     test_metrics = calculate_metrics(y_test, y_pred, y_proba)
     test_metrics["train_time"] = train_time
-    
+
     # Train Metrics
     train_metrics = calculate_metrics(y_train, y_train_pred, y_train_proba)
     train_metrics["train_time"] = train_time
 
     # ROC Curve data
     fpr, tpr, _ = roc_curve(y_test, y_proba)
-    
+
     # Probability Distribution data
     prob_class_0 = y_proba[y_test == 0].tolist()
     prob_class_1 = y_proba[y_test == 1].tolist()
@@ -90,7 +105,7 @@ def train_model(df: pd.DataFrame, model_name: str):
     importances = []
     if hasattr(model, "feature_importances_"):
         importances = model.feature_importances_.tolist()
-    
+
     # CSV Predictions Base
     X_test_raw = pd.DataFrame(scaler.inverse_transform(X_test_scaled), columns=X.columns)
     results_df = X_test_raw.copy()
@@ -129,17 +144,18 @@ def train_model(df: pd.DataFrame, model_name: str):
         "predictions_csv": results_df.to_csv(index=False)
     }
 
+
 def calculate_metrics(y_true, y_pred, y_proba):
     acc = float(accuracy_score(y_true, y_pred))
     prec = float(precision_score(y_true, y_pred))
     rec = float(recall_score(y_true, y_pred))
     auc = float(roc_auc_score(y_true, y_proba)) if y_proba is not None else 0.0
     gini = 2 * auc - 1
-    
+
     ks = 0.0
     if y_proba is not None:
         ks = float(ks_2samp(y_proba[y_true == 1], y_proba[y_true == 0]).statistic)
-        
+
     return {
         "accuracy": acc,
         "precision": prec,
