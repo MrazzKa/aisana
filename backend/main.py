@@ -12,7 +12,7 @@ from ml.predictor import predict, predict_single, predict_with_threshold
 from stats import record_training, record_prediction, get_stats
 from rules import get_rules, add_rule, update_rule, delete_rule, apply_rules
 
-app = FastAPI(title="AISana ML API")
+app = FastAPI(title="Antifraud ML API")
 
 # Setup CORS to allow Next.js app to communicate
 app.add_middleware(
