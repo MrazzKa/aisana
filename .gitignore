@@ -23,3 +23,4 @@ pip-delete-this-directory.txt
 *.log
 backend/models/*_model.pkl
 backend/models/*_features.json
+.claude
