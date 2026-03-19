@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: aisana-backend
+    env: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    plan: free
+    # Раскомментируйте, если вам нужно сохранять обученные модели (Render Disks не работают на бесплатном тарифе)
+    # disk:
+    #   name: models-data
+    #   mountPath: /app/models
+    #   sizeGB: 1
+    envVars:
+      - key: PORT
+        value: 8000
