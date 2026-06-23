@@ -1,0 +1,21 @@
+name: keep-alive
+
+# Пингует бэкенд на Render каждые ~10 минут, чтобы free-tier не «засыпал»
+# и демо не висело ~минуту на первом заходе.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # каждые 10 минут (минимум у GitHub — 5)
+  workflow_dispatch: {}        # можно запустить вручную из вкладки Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health
+        run: |
+          echo "Пингую бэкенд..."
+          code=$(curl -s -m 90 -o /dev/null -w "%{http_code}" https://aisana-backend.onrender.com/api/health)
+          echo "HTTP $code"
+          # 200 — ок; не валим job, даже если бэкенд проснулся не сразу
+          test "$code" = "200" || echo "::warning::backend ответил $code (возможно, холодный старт)"
